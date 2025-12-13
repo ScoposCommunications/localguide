@@ -16,17 +16,6 @@ const categories: (Category | 'All')[] = [
   'Landmarks',
 ];
 
-const categoryIcons: Record<Category | 'All', string> = {
-  All: '🌍',
-  Food: '🍽️',
-  Hotels: '🏨',
-  Attractions: '🎢',
-  Outdoors: '🏕️',
-  Shopping: '🛍️',
-  Landmarks: '🏛️',
-  Other: '📍',
-};
-
 export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
   const handleCategoryChange = (category: Category | 'All') => {
     onFilterChange({ ...filters, category });
@@ -42,12 +31,13 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
+      id="contributions"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="sticky top-0 z-50 glass py-4 px-4"
+      className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50 py-4 px-6"
     >
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-4">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-4">
         {/* Category buttons */}
         <div className="flex flex-wrap justify-center gap-2">
           {categories.map((category) => (
@@ -58,12 +48,11 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
                 ${
                   filters.category === category
-                    ? 'bg-[#34a853] text-white shadow-lg shadow-[#34a853]/25'
-                    : 'bg-[#1f1f1f] text-[#94a3b8] hover:bg-[#2a2a2a] hover:text-white'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white'
                 }
               `}
             >
-              <span className="mr-1.5">{categoryIcons[category]}</span>
               {category}
             </button>
           ))}
@@ -74,7 +63,7 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
           {/* Search input */}
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -93,24 +82,24 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
               onChange={(e) => handleSearchChange(e.target.value)}
               className="
                 w-48 md:w-64 pl-10 pr-4 py-2 rounded-full
-                bg-[#1f1f1f] border border-[#2a2a2a]
-                text-white placeholder-[#94a3b8]
-                focus:outline-none focus:border-[#34a853]/50 focus:ring-1 focus:ring-[#34a853]/50
+                bg-zinc-800/50 border border-zinc-700/50
+                text-white placeholder-zinc-500
+                focus:outline-none focus:border-emerald-500/50 focus:bg-zinc-800
                 transition-all duration-200
               "
             />
           </div>
 
           {/* View mode toggle */}
-          <div className="flex items-center bg-[#1f1f1f] rounded-full p-1">
+          <div className="flex items-center bg-zinc-800/50 rounded-full p-1">
             <button
               onClick={() => handleViewModeChange('map')}
               className={`
                 p-2 rounded-full transition-all duration-200
                 ${
                   filters.viewMode === 'map'
-                    ? 'bg-[#34a853] text-white'
-                    : 'text-[#94a3b8] hover:text-white'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-zinc-500 hover:text-white'
                 }
               `}
               title="Map View"
@@ -130,8 +119,8 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                 p-2 rounded-full transition-all duration-200
                 ${
                   filters.viewMode === 'grid'
-                    ? 'bg-[#34a853] text-white'
-                    : 'text-[#94a3b8] hover:text-white'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-zinc-500 hover:text-white'
                 }
               `}
               title="Grid View"

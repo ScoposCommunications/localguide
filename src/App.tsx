@@ -19,93 +19,67 @@ function Portfolio() {
   const [filters, setFilters] = useState<FilterState>({
     category: 'All',
     searchQuery: '',
-    viewMode: 'map',
+    viewMode: 'grid',
   });
 
   const filteredContributions = useMemo(() => {
     if (!data?.contributions) return [];
 
     return data.contributions.filter((contribution) => {
-      // Filter by category
       if (filters.category !== 'All' && contribution.category !== filters.category) {
         return false;
       }
-
-      // Filter by search query
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
         if (!contribution.placeName.toLowerCase().includes(query)) {
           return false;
         }
       }
-
       return true;
     });
   }, [data?.contributions, filters.category, filters.searchQuery]);
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Unable to Load Profile</h2>
-          <p className="text-[#94a3b8]">Please try refreshing the page.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Unable to Load</h2>
+          <p className="text-zinc-400">Please try refreshing the page.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      {/* Hero Section */}
+    <div className="min-h-screen bg-zinc-950">
       <Hero data={data} isLoading={isLoading} />
-
-      {/* Filter Bar */}
       <FilterBar filters={filters} onFilterChange={setFilters} />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Results count */}
+      <main className="max-w-6xl mx-auto px-6 py-8">
         {!isLoading && (
-          <div className="mb-6 flex items-center justify-between">
-            <p className="text-[#94a3b8]">
+          <div className="mb-6">
+            <p className="text-zinc-500">
               Showing{' '}
-              <span className="text-white font-semibold">
-                {filteredContributions.length}
-              </span>{' '}
-              contributions
+              <span className="text-white font-medium">{filteredContributions.length}</span>
+              {' '}contributions
               {filters.category !== 'All' && (
-                <span>
-                  {' '}in <span className="text-[#34a853]">{filters.category}</span>
-                </span>
+                <span className="text-emerald-400"> in {filters.category}</span>
               )}
               {filters.searchQuery && (
-                <span>
-                  {' '}matching "<span className="text-[#34a853]">{filters.searchQuery}</span>"
-                </span>
+                <span> matching "<span className="text-emerald-400">{filters.searchQuery}</span>"</span>
               )}
             </p>
           </div>
         )}
 
-        {/* Map or Grid View */}
         {filters.viewMode === 'map' ? (
-          <ContributionMap
-            contributions={filteredContributions}
-            isLoading={isLoading}
-          />
+          <ContributionMap contributions={filteredContributions} isLoading={isLoading} />
         ) : (
-          <ContributionGrid
-            contributions={filteredContributions}
-            isLoading={isLoading}
-          />
+          <ContributionGrid contributions={filteredContributions} isLoading={isLoading} />
         )}
       </main>
 
-      {/* Footer */}
-      <Footer
-        profileUrl={data?.profileUrl || 'https://www.google.com/maps/contrib/103557089728311501865'}
-      />
+      <Footer profileUrl={data?.profileUrl || 'https://www.google.com/maps/contrib/103557089728311501865'} />
     </div>
   );
 }
