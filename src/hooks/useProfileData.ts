@@ -1,50 +1,61 @@
 import { useQuery } from '@tanstack/react-query';
-import { profileData as fallbackData } from '../data/profileData';
-import scrapedProfile from '../data/profile.json';
-import type { ProfileData } from '../types';
 
-const getProfileData = async (): Promise<ProfileData> => {
-  // Use scraped data if it exists and was successful
-  if (scrapedProfile && scrapedProfile.scrapedSuccessfully) {
-    return {
-      name: scrapedProfile.name || 'Local Guide',
-      level: scrapedProfile.level || fallbackData.level,
-      totalViews: scrapedProfile.totalViews || fallbackData.totalViews,
-      totalPhotos: scrapedProfile.totalPhotos || fallbackData.totalPhotos,
-      totalReviews: scrapedProfile.totalReviews || fallbackData.totalReviews,
-      profileUrl: scrapedProfile.profileUrl || fallbackData.profileUrl,
-      // Use scraped photos if available, otherwise use fallback contributions
-      contributions: scrapedProfile.photos && scrapedProfile.photos.length > 0
-        ? scrapedProfile.photos.map((photo: any, i: number) => ({
-            id: photo.id || `photo-${i}`,
-            placeName: `Photo ${i + 1}`,
-            placeUrl: scrapedProfile.profileUrl,
-            photoUrl: photo.url || photo.photoUrl,
-            thumbnailUrl: photo.thumbnail || photo.thumbnailUrl,
-            viewCount: Math.floor(scrapedProfile.totalViews / scrapedProfile.totalPhotos) || 0,
-            category: 'Other' as const,
-          }))
-        : fallbackData.contributions,
-      lastUpdated: scrapedProfile.lastUpdated,
-    };
+const CONTRIBUTOR_ID = '103557089728311501865';
+
+export interface Photo {
+  id: string;
+  url: string;
+  thumbnail: string;
+}
+
+export interface ProfileData {
+  success: boolean;
+  profileUrl: string;
+  contributorId: string;
+  name: string;
+  level: number | null;
+  totalViews: number | null;
+  totalPhotos: number | null;
+  totalReviews: number | null;
+  totalRatings: number | null;
+  totalEdits: number | null;
+  photos: Photo[];
+  extractedAt: string;
+}
+
+export interface ProfileError {
+  error: string;
+  message: string;
+  debug?: {
+    url: string;
+    rawTextSample: string;
+  };
+}
+
+const fetchProfileData = async (): Promise<ProfileData> => {
+  const response = await fetch(`/api/profile/${CONTRIBUTOR_ID}`);
+
+  if (!response.ok) {
+    const errorData: ProfileError = await response.json();
+    throw new Error(errorData.message || errorData.error || 'Failed to fetch profile data');
   }
 
-  // Fall back to static data if scraping hasn't run yet
-  return {
-    ...fallbackData,
-    // Use scraped stats if available even if photos weren't scraped
-    level: scrapedProfile.level || fallbackData.level,
-    totalViews: scrapedProfile.totalViews || fallbackData.totalViews,
-    totalPhotos: scrapedProfile.totalPhotos || fallbackData.totalPhotos,
-    totalReviews: scrapedProfile.totalReviews || fallbackData.totalReviews,
-  };
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || 'Failed to extract profile data');
+  }
+
+  return data;
 };
 
 export function useProfileData() {
   return useQuery({
-    queryKey: ['profile'],
-    queryFn: getProfileData,
+    queryKey: ['profile', CONTRIBUTOR_ID],
+    queryFn: fetchProfileData,
     staleTime: 1000 * 60 * 60, // 1 hour
     gcTime: 1000 * 60 * 60 * 2, // 2 hours
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 }

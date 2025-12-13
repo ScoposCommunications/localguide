@@ -6,7 +6,7 @@ interface FooterProps {
 
 export function Footer({ profileUrl }: FooterProps) {
   return (
-    <footer className="border-t border-zinc-800/50 mt-20">
+    <footer className="border-t border-slate-200 mt-20 bg-white">
       <div className="max-w-6xl mx-auto px-6 py-16">
         {/* CTA Section */}
         <motion.div
@@ -16,10 +16,10 @@ export function Footer({ profileUrl }: FooterProps) {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
             Let's Work Together
           </h2>
-          <p className="text-zinc-400 max-w-xl mx-auto mb-8">
+          <p className="text-slate-500 max-w-xl mx-auto mb-8">
             Need professional local photography or reviews for your business?
             I help brands connect with travelers through authentic content.
           </p>
@@ -29,13 +29,13 @@ export function Footer({ profileUrl }: FooterProps) {
               href={profileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-zinc-900 font-semibold rounded-full hover:bg-zinc-100 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/25"
             >
               View Full Profile
             </a>
             <a
               href="mailto:hello@example.com"
-              className="inline-flex items-center gap-2 px-6 py-3 border border-zinc-700 text-white font-semibold rounded-full hover:bg-zinc-800 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-full hover:bg-slate-50 transition-colors"
             >
               Get in Touch
             </a>
@@ -43,23 +43,23 @@ export function Footer({ profileUrl }: FooterProps) {
         </motion.div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-zinc-800/50">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-slate-200">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-              <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
               </svg>
             </div>
-            <span className="text-white font-medium">Local Guide</span>
+            <span className="text-slate-800 font-medium">Local Guide Portfolio</span>
           </div>
 
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-slate-500">
             Data from{' '}
             <a
               href={profileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-blue-600 hover:text-blue-700 transition-colors"
             >
               Google Maps
             </a>
