@@ -66,3 +66,4 @@ Data is cached for 1 hour.
 ## License
 
 MIT
+# Deployment trigger
