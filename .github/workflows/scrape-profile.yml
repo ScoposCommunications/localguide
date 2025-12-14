@@ -27,6 +27,22 @@ jobs:
 
       - name: Run scraper
         run: node scripts/scrape-profile.js
+        continue-on-error: true
+
+      - name: Upload debug artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scrape-debug
+          path: |
+            src/data/profile.json
+            debug-screenshot.png
+          retention-days: 7
+
+      - name: Show scrape results
+        run: |
+          echo "=== Profile Data ==="
+          cat src/data/profile.json || echo "No profile.json found"
 
       - name: Commit and push if changed
         run: |
