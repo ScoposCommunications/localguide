@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,15 +14,17 @@ async function scrapeProfile() {
 
   let browser;
   try {
-    console.log('Launching browser...');
+    console.log('Launching browser with @sparticuz/chromium...');
+
     browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1920, height: 1080 });
 
     console.log('Navigating to profile...');
     await page.goto(PROFILE_URL, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -44,7 +47,7 @@ async function scrapeProfile() {
       const levelMatch = text.match(/Level\s+(\d+)/i);
       if (levelMatch) result.level = parseInt(levelMatch[1]);
 
-      // Views - try multiple patterns
+      // Views
       const viewPatterns = [
         /(\d[\d,]*)\s*views/i,
         /viewed\s+(\d[\d,]*)/i,
@@ -116,7 +119,6 @@ async function scrapeProfile() {
 
     if (browser) await browser.close();
 
-    // Write error state - NOT fake data
     const errorOutput = {
       needsSetup: false,
       scrapedSuccessfully: false,
@@ -133,8 +135,6 @@ async function scrapeProfile() {
 
     fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify(errorOutput, null, 2));
-
-    // Don't exit with error - let build continue so user sees error on site
     console.log('Error state saved. Build will continue.');
   }
 }
