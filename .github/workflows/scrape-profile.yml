@@ -1,14 +1,13 @@
 name: Scrape Google Maps Profile
 
 on:
-  # Run daily at 6 AM UTC
   schedule:
     - cron: '0 6 * * *'
-  # Allow manual trigger
   workflow_dispatch:
-  # Run on push to main (for initial setup)
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'claude/**'
 
 jobs:
   scrape:
