@@ -10,21 +10,19 @@ export interface Photo {
 }
 
 export interface ProfileData {
-  name: string;
-  level: number;
-  totalViews: number;
-  totalPhotos: number;
-  totalReviews: number;
+  needsSetup?: boolean;
+  name: string | null;
+  level: number | null;
+  totalViews: number | null;
+  totalPhotos: number | null;
+  totalReviews: number | null;
   profileUrl: string;
   photos: Photo[];
-  lastUpdated: string;
+  lastUpdated: string | null;
   scrapedSuccessfully: boolean;
-  message?: string;
 }
 
 const getProfileData = async (): Promise<ProfileData> => {
-  // Return the static data from the JSON file
-  // This file is updated by GitHub Actions
   return profileData as ProfileData;
 };
 
@@ -32,7 +30,7 @@ export function useProfileData() {
   return useQuery({
     queryKey: ['profile'],
     queryFn: getProfileData,
-    staleTime: Infinity, // Static data doesn't go stale
+    staleTime: Infinity,
     gcTime: Infinity,
   });
 }
