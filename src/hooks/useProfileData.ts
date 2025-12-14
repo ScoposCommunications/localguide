@@ -20,6 +20,7 @@ export interface ProfileData {
   photos: Photo[];
   lastUpdated: string | null;
   scrapedSuccessfully: boolean;
+  error?: string;
 }
 
 const getProfileData = async (): Promise<ProfileData> => {
