@@ -1,4 +1,3 @@
-import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
@@ -6,25 +5,50 @@ const PROFILE_ID = '103557089728311501865';
 const PROFILE_URL = `https://www.google.com/maps/contrib/${PROFILE_ID}`;
 const OUTPUT_PATH = path.join(process.cwd(), 'src/data/profile.json');
 
+async function getBrowser() {
+  // Vercel/serverless environment - use @sparticuz/chromium
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    console.log('Using @sparticuz/chromium for serverless environment...');
+    const chromium = (await import('@sparticuz/chromium')).default;
+    const puppeteerCore = (await import('puppeteer-core')).default;
+
+    chromium.setHeadlessMode = true;
+    chromium.setGraphicsMode = false;
+
+    return puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  }
+
+  // GitHub Actions or local - use regular puppeteer
+  console.log('Using puppeteer for standard environment...');
+  const puppeteer = (await import('puppeteer')).default;
+  return puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+}
+
 async function scrapeProfile() {
   console.log('=== SCRAPING GOOGLE MAPS PROFILE ===');
   console.log('Profile:', PROFILE_URL);
+  console.log('Environment:', process.env.VERCEL ? 'Vercel' : process.env.GITHUB_ACTIONS ? 'GitHub Actions' : 'Local');
 
   let browser;
   try {
-    console.log('Launching browser...');
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    browser = await getBrowser();
 
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
 
     console.log('Loading page...');
     await page.goto(PROFILE_URL, { waitUntil: 'networkidle2', timeout: 60000 });
 
     // Wait for content to load
+    console.log('Waiting for content...');
     await new Promise(r => setTimeout(r, 5000));
 
     console.log('Extracting data...');

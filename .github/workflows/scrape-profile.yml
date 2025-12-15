@@ -22,11 +22,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Puppeteer
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Puppeteer for GitHub Actions
         run: npm install puppeteer
 
       - name: Run scraper
         run: node scripts/scrape-profile.js
+        env:
+          GITHUB_ACTIONS: true
 
       - name: Commit and push if changed
         run: |
