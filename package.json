@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "vite",
     "scrape": "node scripts/scrape-profile.js",
-    "build": "npm run scrape && tsc -b && vite build",
+    "build": "npm run scrape || true && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@sparticuz/chromium": "^131.0.1",
     "puppeteer-core": "^23.10.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.12",
     "framer-motion": "^12.23.26",
