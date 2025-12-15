@@ -16,6 +16,7 @@ export interface ProfileData {
   totalViews: number | null;
   totalPhotos: number | null;
   totalReviews: number | null;
+  totalRatings?: number | null;
   profileUrl: string;
   photos: Photo[];
   lastUpdated: string | null;

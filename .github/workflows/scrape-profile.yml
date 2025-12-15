@@ -2,16 +2,22 @@ name: Scrape Google Maps Profile
 
 on:
   schedule:
+    # Run daily at 6 AM UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
+    # Allow manual triggering
   push:
     branches:
       - main
       - 'claude/**'
+    paths:
+      - 'scripts/scrape-profile.js'
+      - '.github/workflows/scrape-profile.yml'
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -22,16 +28,47 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Puppeteer
-        run: npm install puppeteer
+      - name: Install dependencies
+        run: |
+          npm install puppeteer
+          echo "Puppeteer installed successfully"
 
       - name: Run scraper
-        run: node scripts/scrape-profile.js
+        run: |
+          echo "Starting scraper..."
+          node scripts/scrape-profile.js
+          echo "Scraper finished"
+
+      - name: Show scraped data
+        run: |
+          echo "=== Scraped Profile Data ==="
+          cat src/data/profile.json
+          echo ""
+          echo "==========================="
+
+      - name: Check if data was successfully scraped
+        run: |
+          SUCCESS=$(jq -r '.scrapedSuccessfully' src/data/profile.json)
+          if [ "$SUCCESS" != "true" ]; then
+            echo "WARNING: Scraping was not fully successful"
+            jq '.' src/data/profile.json
+          else
+            echo "Scraping successful!"
+            echo "Level: $(jq -r '.level' src/data/profile.json)"
+            echo "Views: $(jq -r '.totalViews' src/data/profile.json)"
+            echo "Photos: $(jq -r '.totalPhotos' src/data/profile.json)"
+            echo "Reviews: $(jq -r '.totalReviews' src/data/profile.json)"
+          fi
 
       - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add src/data/profile.json
-          git diff --staged --quiet || git commit -m "chore: Update profile data [skip ci]"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: Update profile data [skip ci]"
+            git push
+            echo "Changes committed and pushed"
+          fi
