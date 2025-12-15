@@ -26,7 +26,7 @@ async function autoScroll(page) {
 }
 
 async function scrapeProfile() {
-  console.log('=== SCRAPING GOOGLE MAPS PROFILE ===');
+  console.log('=== SCRAPING GOOGLE MAPS PROFILE (v2) ===');
   console.log('Profile ID:', PROFILE_ID);
   console.log('URL:', PROFILE_URL);
   console.log('Timestamp:', new Date().toISOString());
