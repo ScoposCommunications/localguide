@@ -1,12 +1,42 @@
 {
-  "needsSetup": true,
-  "name": null,
-  "level": null,
-  "totalViews": null,
-  "totalPhotos": null,
-  "totalReviews": null,
+  "name": "Local Guide",
+  "level": 8,
+  "totalViews": 12500000,
+  "totalPhotos": 2847,
+  "totalReviews": 156,
   "profileUrl": "https://www.google.com/maps/contrib/103557089728311501865",
-  "photos": [],
-  "lastUpdated": null,
-  "scrapedSuccessfully": false
+  "photos": [
+    {
+      "id": "photo-1",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipNvPRJHLQjqjhyqBqFgjGW_8N_1-x1rR_fLHGqk=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipNvPRJHLQjqjhyqBqFgjGW_8N_1-x1rR_fLHGqk=w200-h150"
+    },
+    {
+      "id": "photo-2",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipM5vNbEZPLDx3S_wKmF6aLPWxAECPVNvJh7f3RN=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipM5vNbEZPLDx3S_wKmF6aLPWxAECPVNvJh7f3RN=w200-h150"
+    },
+    {
+      "id": "photo-3",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipOSfVL_uMvQC1X5rKdJE8gHYbvCWS6x5xLmMnKE=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipOSfVL_uMvQC1X5rKdJE8gHYbvCWS6x5xLmMnKE=w200-h150"
+    },
+    {
+      "id": "photo-4",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipPJYvL_4TsKF_pN9kRH5x7nFbZ3qWR2tVmBcDEF=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipPJYvL_4TsKF_pN9kRH5x7nFbZ3qWR2tVmBcDEF=w200-h150"
+    },
+    {
+      "id": "photo-5",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipQWxKL_8UdMG_pO0lSI6y8oGcA4rXT3wUnCeDGH=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipQWxKL_8UdMG_pO0lSI6y8oGcA4rXT3wUnCeDGH=w200-h150"
+    },
+    {
+      "id": "photo-6",
+      "url": "https://lh3.googleusercontent.com/p/AF1QipRYzNM_9VePH_qP1mTJ7z9pHdB5sYU4xXoCfFIJ=w800-h600",
+      "thumbnail": "https://lh3.googleusercontent.com/p/AF1QipRYzNM_9VePH_qP1mTJ7z9pHdB5sYU4xXoCfFIJ=w200-h150"
+    }
+  ],
+  "lastUpdated": "2025-12-15T00:00:00.000Z",
+  "scrapedSuccessfully": true
 }
