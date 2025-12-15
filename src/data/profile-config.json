@@ -1,0 +1,9 @@
+{
+  "_comment": "Set your profile data here. Scraper will try to update automatically, but this is the fallback.",
+  "name": "Local Guide",
+  "level": 7,
+  "totalViews": 15000000,
+  "totalPhotos": 2500,
+  "totalReviews": 150,
+  "profileUrl": "https://www.google.com/maps/contrib/103557089728311501865"
+}
