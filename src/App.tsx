@@ -38,7 +38,11 @@ function Portfolio() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading profile data...</p>
+          <p className="text-slate-400 text-sm mt-2">This may take up to 30 seconds</p>
+        </div>
       </div>
     );
   }
