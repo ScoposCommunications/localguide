@@ -6,34 +6,15 @@ const PROFILE_ID = '103557089728311501865';
 const PROFILE_URL = `https://www.google.com/maps/contrib/${PROFILE_ID}`;
 const OUTPUT_PATH = path.join(process.cwd(), 'src/data/profile.json');
 
-// Helper to scroll page and load lazy content
-async function autoScroll(page) {
-  await page.evaluate(async () => {
-    await new Promise((resolve) => {
-      let totalHeight = 0;
-      const distance = 300;
-      const timer = setInterval(() => {
-        const scrollHeight = document.body.scrollHeight;
-        window.scrollBy(0, distance);
-        totalHeight += distance;
-        if (totalHeight >= scrollHeight || totalHeight > 5000) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
-    });
-  });
-}
-
 async function scrapeProfile() {
-  console.log('=== SCRAPING GOOGLE MAPS PROFILE (v2) ===');
+  console.log('=== GOOGLE MAPS PROFILE SCRAPER v3 ===');
   console.log('Profile ID:', PROFILE_ID);
   console.log('URL:', PROFILE_URL);
-  console.log('Timestamp:', new Date().toISOString());
+  console.log('Time:', new Date().toISOString());
 
   let browser;
   try {
-    console.log('\n[1/6] Launching browser...');
+    console.log('\n[1/7] Launching browser...');
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -41,176 +22,200 @@ async function scrapeProfile() {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-web-security',
-        '--window-size=1920,1080'
+        '--window-size=1920,1080',
+        '--lang=en-US,en'
       ]
     });
 
     const page = await browser.newPage();
-
-    // Set viewport and user agent
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     );
 
-    // Block unnecessary resources for faster loading
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const resourceType = req.resourceType();
-      if (['font', 'media'].includes(resourceType)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
+    // Set English language preference
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
 
-    console.log('[2/6] Loading profile page...');
+    console.log('[2/7] Loading profile page...');
     const response = await page.goto(PROFILE_URL, {
       waitUntil: 'networkidle2',
       timeout: 60000
     });
+    console.log('     Status:', response.status());
 
-    console.log(`     HTTP Status: ${response.status()}`);
+    // Handle cookie consent - try multiple selectors
+    console.log('[3/7] Handling consent dialogs...');
+    const consentSelectors = [
+      'button[aria-label*="Accept"]',
+      'button[aria-label*="accept"]',
+      '[aria-label*="Accept all"]',
+      'button:has-text("Accept all")',
+      'button:has-text("I agree")',
+      'button:has-text("Accept")',
+      '[data-ved] button',
+      'form[action*="consent"] button'
+    ];
 
-    // Wait for page content to stabilize
-    console.log('[3/6] Waiting for content to load...');
+    for (const selector of consentSelectors) {
+      try {
+        const btn = await page.$(selector);
+        if (btn) {
+          await btn.click();
+          console.log('     Clicked consent button:', selector);
+          await new Promise(r => setTimeout(r, 2000));
+          break;
+        }
+      } catch (e) {
+        // Continue trying other selectors
+      }
+    }
+
+    // Also try clicking by text content
+    try {
+      await page.evaluate(() => {
+        const buttons = [...document.querySelectorAll('button')];
+        const acceptBtn = buttons.find(b =>
+          b.textContent?.toLowerCase().includes('accept') ||
+          b.textContent?.toLowerCase().includes('agree')
+        );
+        if (acceptBtn) acceptBtn.click();
+      });
+    } catch (e) {
+      // Ignore
+    }
+
+    console.log('[4/7] Waiting for content to load...');
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Scroll to trigger lazy loading
+    console.log('[5/7] Scrolling page...');
+    await page.evaluate(async () => {
+      for (let i = 0; i < 5; i++) {
+        window.scrollBy(0, 500);
+        await new Promise(r => setTimeout(r, 500));
+      }
+      window.scrollTo(0, 0);
+    });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Scroll to load lazy content
-    console.log('[4/6] Scrolling to load lazy content...');
-    await autoScroll(page);
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Scroll back to top
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await new Promise(r => setTimeout(r, 1000));
-
-    console.log('[5/6] Extracting data...');
+    console.log('[6/7] Extracting data...');
     const data = await page.evaluate(() => {
-      const text = document.body.innerText;
+      const bodyText = document.body.innerText;
+      const html = document.body.innerHTML;
 
-      // Log page text length for debugging
-      console.log('Page text length:', text.length);
+      // Debug: get page structure
+      const debugInfo = {
+        textLength: bodyText.length,
+        hasLevel: bodyText.toLowerCase().includes('level'),
+        hasViews: bodyText.toLowerCase().includes('view'),
+        hasPhotos: bodyText.toLowerCase().includes('photo'),
+        hasReviews: bodyText.toLowerCase().includes('review'),
+        hasContributions: bodyText.toLowerCase().includes('contribution'),
+        title: document.title,
+        url: window.location.href
+      };
 
-      // Extract name - usually in an h1 or heading element
+      // Try to find the contributor name
       let name = null;
-      const h1 = document.querySelector('h1');
-      if (h1) {
-        name = h1.innerText.trim();
-      }
-      // If name contains "contributions" or looks like stats, try alternatives
-      if (!name || name.toLowerCase().includes('contribution') || /^\d/.test(name)) {
-        const headings = document.querySelectorAll('[role="heading"]');
-        for (const h of headings) {
-          const t = h.innerText.trim();
-          if (t && !t.toLowerCase().includes('contribution') && !/^\d/.test(t) && t.length < 50) {
-            name = t;
-            break;
-          }
+      // Look for the main heading
+      const headings = document.querySelectorAll('h1, [role="heading"][aria-level="1"]');
+      for (const h of headings) {
+        const text = h.textContent?.trim();
+        if (text && text.length > 1 && text.length < 100 && !text.match(/^\d/)) {
+          name = text;
+          break;
         }
       }
 
-      // Extract level - patterns like "Level 8" or "Level 8 Local Guide"
+      // Extract level
       let level = null;
       const levelPatterns = [
         /Level\s*(\d+)/i,
-        /Local Guide\s*Level\s*(\d+)/i,
-        /(\d+)\s*Local Guide/i
+        /(\d+)\s*Local Guide/i,
+        /Local Guide.*?(\d+)/i
       ];
       for (const pattern of levelPatterns) {
-        const match = text.match(pattern);
-        if (match) {
+        const match = bodyText.match(pattern);
+        if (match && parseInt(match[1]) >= 1 && parseInt(match[1]) <= 10) {
           level = parseInt(match[1]);
-          if (level >= 1 && level <= 10) break; // Valid level range
-          level = null;
+          break;
         }
       }
 
-      // Extract views - "X views" or "viewed X times"
+      // Extract views - look for large numbers followed by "views"
       let totalViews = null;
       const viewPatterns = [
-        /([\d,]+(?:\.\d+)?[KMB]?)\s*views/i,
-        /viewed\s*([\d,]+(?:\.\d+)?[KMB]?)\s*times/i,
-        /([\d,]+(?:\.\d+)?)\s*photo\s*views/i
+        /([\d,]+)\s*views/gi,
+        /views[:\s]*([\d,]+)/gi,
+        /([\d,]+)\s*photo views/gi
       ];
       for (const pattern of viewPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          let val = match[1].replace(/,/g, '');
-          // Handle K, M, B suffixes
-          if (val.endsWith('K')) totalViews = parseFloat(val) * 1000;
-          else if (val.endsWith('M')) totalViews = parseFloat(val) * 1000000;
-          else if (val.endsWith('B')) totalViews = parseFloat(val) * 1000000000;
-          else totalViews = parseInt(val);
-          if (totalViews > 0) break;
+        const matches = [...bodyText.matchAll(pattern)];
+        for (const match of matches) {
+          const num = parseInt(match[1].replace(/,/g, ''));
+          if (num > 1000 && (totalViews === null || num > totalViews)) {
+            totalViews = num;
+          }
         }
       }
 
       // Extract photos count
       let totalPhotos = null;
       const photoPatterns = [
-        /([\d,]+)\s*photos?(?!\s*views)/i,
-        /photos?\s*\(?([\d,]+)\)?/i
+        /([\d,]+)\s*photos?(?!\s*view)/gi,
+        /photos?[:\s]*([\d,]+)/gi
       ];
       for (const pattern of photoPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          totalPhotos = parseInt(match[1].replace(/,/g, ''));
-          if (totalPhotos > 0) break;
+        const matches = [...bodyText.matchAll(pattern)];
+        for (const match of matches) {
+          const num = parseInt(match[1].replace(/,/g, ''));
+          if (num > 0 && num < 100000) {
+            totalPhotos = num;
+            break;
+          }
         }
+        if (totalPhotos) break;
       }
 
       // Extract reviews count
       let totalReviews = null;
       const reviewPatterns = [
-        /([\d,]+)\s*reviews?/i,
-        /reviews?\s*\(?([\d,]+)\)?/i
+        /([\d,]+)\s*reviews?/gi,
+        /reviews?[:\s]*([\d,]+)/gi
       ];
       for (const pattern of reviewPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          totalReviews = parseInt(match[1].replace(/,/g, ''));
-          if (totalReviews > 0) break;
+        const matches = [...bodyText.matchAll(pattern)];
+        for (const match of matches) {
+          const num = parseInt(match[1].replace(/,/g, ''));
+          if (num > 0 && num < 100000) {
+            totalReviews = num;
+            break;
+          }
         }
+        if (totalReviews) break;
       }
 
-      // Extract ratings count if available
-      let totalRatings = null;
-      const ratingMatch = text.match(/([\d,]+)\s*ratings?/i);
-      if (ratingMatch) {
-        totalRatings = parseInt(ratingMatch[1].replace(/,/g, ''));
-      }
-
-      // Get photo elements - look for contribution images
+      // Get photos
       const photos = [];
-      const imgElements = document.querySelectorAll('img[src*="googleusercontent"], img[src*="gstatic"]');
-
-      for (const img of imgElements) {
-        const src = img.src || '';
-        // Skip avatars, icons, and very small images
-        if (src.includes('avatar') || src.includes('icon') || img.width < 50 || img.height < 50) {
+      const images = document.querySelectorAll('img[src*="googleusercontent"], img[src*="lh3."], img[src*="lh4."], img[src*="lh5."]');
+      for (const img of images) {
+        const src = img.src;
+        if (!src || src.includes('avatar') || src.includes('icon') || src.includes('=s32') || src.includes('=s64')) {
           continue;
         }
-        // Skip if it looks like a UI element
-        if (img.closest('button') || img.closest('[role="menuitem"]')) {
-          continue;
-        }
-
-        // Get high-res version of the image
-        const highResUrl = src.replace(/=w\d+-h\d+/, '=w800-h600').replace(/=s\d+/, '=s800');
+        const rect = img.getBoundingClientRect();
+        if (rect.width < 50 || rect.height < 50) continue;
 
         photos.push({
           id: `photo-${photos.length}`,
-          url: highResUrl,
+          url: src.replace(/=w\d+-h\d+/, '=w800-h600').replace(/=s\d+/, '=s800'),
           thumbnail: src
         });
-
-        if (photos.length >= 50) break; // Limit to 50 photos
+        if (photos.length >= 50) break;
       }
 
-      // Get first 500 chars of page text for debugging
-      const debugText = text.substring(0, 500).replace(/\s+/g, ' ');
+      // Get a sample of the text for debugging
+      const textSample = bodyText.substring(0, 1500).replace(/\s+/g, ' ');
 
       return {
         name,
@@ -218,10 +223,9 @@ async function scrapeProfile() {
         totalViews,
         totalPhotos,
         totalReviews,
-        totalRatings,
         photos,
-        pageTextLength: text.length,
-        debugTextPreview: debugText
+        debugInfo,
+        textSample
       };
     });
 
@@ -234,56 +238,55 @@ async function scrapeProfile() {
       totalViews: data.totalViews,
       totalPhotos: data.totalPhotos,
       totalReviews: data.totalReviews,
-      totalRatings: data.totalRatings,
       profileUrl: PROFILE_URL,
-      photos: data.photos,
+      photos: data.photos || [],
       lastUpdated: new Date().toISOString(),
       scrapedSuccessfully: !!(data.level || data.totalViews || data.totalPhotos || data.totalReviews)
     };
 
-    console.log('\n[6/6] Results:');
+    console.log('\n[7/7] Results:');
     console.log('     Name:', output.name);
     console.log('     Level:', output.level);
     console.log('     Views:', output.totalViews?.toLocaleString() || 'N/A');
     console.log('     Photos:', output.totalPhotos?.toLocaleString() || 'N/A');
     console.log('     Reviews:', output.totalReviews?.toLocaleString() || 'N/A');
-    console.log('     Ratings:', output.totalRatings?.toLocaleString() || 'N/A');
-    console.log('     Photo URLs extracted:', output.photos.length);
-    console.log('     Page text length:', data.pageTextLength);
-    console.log('     Successfully scraped:', output.scrapedSuccessfully);
+    console.log('     Images found:', output.photos.length);
+    console.log('     Success:', output.scrapedSuccessfully);
+
+    console.log('\n[DEBUG] Page info:');
+    console.log('     Title:', data.debugInfo.title);
+    console.log('     URL:', data.debugInfo.url);
+    console.log('     Text length:', data.debugInfo.textLength);
+    console.log('     Has "level":', data.debugInfo.hasLevel);
+    console.log('     Has "view":', data.debugInfo.hasViews);
+    console.log('     Has "photo":', data.debugInfo.hasPhotos);
+    console.log('     Has "review":', data.debugInfo.hasReviews);
 
     if (!output.scrapedSuccessfully) {
-      console.log('\n[DEBUG] Page text preview:');
-      console.log(data.debugTextPreview);
+      console.log('\n[DEBUG] Text sample:');
+      console.log(data.textSample);
     }
 
-    // Save output
+    // Save
     fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2));
+    console.log('\nSaved to:', OUTPUT_PATH);
 
-    console.log('\n=== SCRAPE COMPLETE ===');
-    console.log('Output saved to:', OUTPUT_PATH);
-
-    // Exit with error if we didn't get any data
     if (!output.scrapedSuccessfully) {
-      console.error('\nWARNING: No profile data was extracted. The page may have changed structure.');
+      console.log('\n⚠️  WARNING: No data extracted. Check the debug output above.');
       process.exit(1);
     }
 
+    console.log('\n✅ SCRAPE COMPLETE');
+
   } catch (err) {
-    console.error('\n=== SCRAPE FAILED ===');
+    console.error('\n❌ SCRAPE FAILED');
     console.error('Error:', err.message);
-    console.error('Stack:', err.stack);
 
     if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        // Ignore close errors
-      }
+      try { await browser.close(); } catch (e) {}
     }
 
-    // Save error state
     fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify({
       name: null,
