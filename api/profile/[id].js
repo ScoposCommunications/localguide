@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium-min';
+import chromium from '@sparticuz/chromium';
 
 export const config = {
   maxDuration: 60,
@@ -15,15 +15,11 @@ export default async function handler(req, res) {
   let browser;
 
   try {
-    const executablePath = await chromium.executablePath(
-      'https://github.com/nicenoise/chromium/releases/download/v127.0.1/chromium-v127.0.1-pack.tar'
-    );
-
     browser = await puppeteer.launch({
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--lang=en-US,en'],
+      args: chromium.args,
       defaultViewport: { width: 1920, height: 1080 },
-      executablePath,
-      headless: true,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
@@ -35,26 +31,24 @@ export default async function handler(req, res) {
 
     const profileUrl = `https://www.google.com/maps/contrib/${id}`;
 
-    await page.goto(profileUrl, {
+    const response = await page.goto(profileUrl, {
       waitUntil: 'networkidle2',
       timeout: 45000
     });
 
-    // Handle consent dialogs
-    try {
-      await page.evaluate(() => {
-        const buttons = [...document.querySelectorAll('button')];
-        const acceptBtn = buttons.find(b =>
-          b.textContent?.toLowerCase().includes('accept') ||
-          b.textContent?.toLowerCase().includes('agree')
-        );
-        if (acceptBtn) acceptBtn.click();
-      });
-      await new Promise(r => setTimeout(r, 2000));
-    } catch (e) {}
+    console.log('Page loaded, status:', response.status());
 
-    // Wait for content
-    await new Promise(r => setTimeout(r, 5000));
+    // Handle consent dialogs
+    await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll('button')];
+      const acceptBtn = buttons.find(b =>
+        b.textContent?.toLowerCase().includes('accept') ||
+        b.textContent?.toLowerCase().includes('agree')
+      );
+      if (acceptBtn) acceptBtn.click();
+    });
+
+    await new Promise(r => setTimeout(r, 3000));
 
     // Scroll to load content
     await page.evaluate(async () => {
@@ -64,23 +58,21 @@ export default async function handler(req, res) {
       }
       window.scrollTo(0, 0);
     });
+
     await new Promise(r => setTimeout(r, 2000));
 
     // Extract data
     const data = await page.evaluate(() => {
       const text = document.body.innerText;
 
-      // Name
       let name = null;
       const h1 = document.querySelector('h1');
       if (h1) name = h1.textContent?.trim();
 
-      // Level
       let level = null;
       const levelMatch = text.match(/Level\s*(\d+)/i);
       if (levelMatch) level = parseInt(levelMatch[1]);
 
-      // Views
       let totalViews = null;
       const viewMatches = [...text.matchAll(/([\d,]+)\s*views/gi)];
       for (const m of viewMatches) {
@@ -88,17 +80,14 @@ export default async function handler(req, res) {
         if (num > 1000 && (!totalViews || num > totalViews)) totalViews = num;
       }
 
-      // Photos
       let totalPhotos = null;
       const photoMatch = text.match(/([\d,]+)\s*photos?(?!\s*view)/i);
       if (photoMatch) totalPhotos = parseInt(photoMatch[1].replace(/,/g, ''));
 
-      // Reviews
       let totalReviews = null;
       const reviewMatch = text.match(/([\d,]+)\s*reviews?/i);
       if (reviewMatch) totalReviews = parseInt(reviewMatch[1].replace(/,/g, ''));
 
-      // Photos
       const photos = [];
       const images = document.querySelectorAll('img[src*="googleusercontent"], img[src*="lh3."]');
       for (const img of images) {
@@ -112,10 +101,28 @@ export default async function handler(req, res) {
         if (photos.length >= 30) break;
       }
 
-      return { name, level, totalViews, totalPhotos, totalReviews, photos, textSample: text.substring(0, 500) };
+      return {
+        name,
+        level,
+        totalViews,
+        totalPhotos,
+        totalReviews,
+        photos,
+        textLength: text.length,
+        textSample: text.substring(0, 300)
+      };
     });
 
     await browser.close();
+
+    console.log('Extracted:', JSON.stringify({
+      name: data.name,
+      level: data.level,
+      views: data.totalViews,
+      photos: data.totalPhotos,
+      reviews: data.totalReviews,
+      textLength: data.textLength
+    }));
 
     const result = {
       name: data.name || 'Local Guide',
@@ -126,15 +133,21 @@ export default async function handler(req, res) {
       profileUrl,
       photos: data.photos,
       lastUpdated: new Date().toISOString(),
-      scrapedSuccessfully: !!(data.level || data.totalViews || data.totalPhotos)
+      scrapedSuccessfully: !!(data.level || data.totalViews || data.totalPhotos),
+      debug: {
+        textLength: data.textLength,
+        textSample: data.textSample
+      }
     };
 
-    // Cache for 1 hour
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     return res.json(result);
 
   } catch (error) {
-    if (browser) await browser.close();
+    console.error('Scrape error:', error);
+    if (browser) {
+      try { await browser.close(); } catch (e) {}
+    }
 
     return res.status(500).json({
       error: 'Failed to scrape profile',
