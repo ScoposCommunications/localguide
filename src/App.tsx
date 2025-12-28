@@ -5,27 +5,45 @@ import { useProfileData, PROFILE_URL } from './hooks/useProfileData';
 
 const queryClient = new QueryClient();
 
-function ScrapeError({ message }: { message?: string }) {
+function ScrapeError({ message, lastUpdated }: { message?: string; lastUpdated?: string | null }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
       <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Scrape Failed</h1>
-        <p className="text-slate-500 mb-4">
-          {message || 'Could not extract data from Google Maps profile'}
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Data Sync In Progress</h1>
+        <p className="text-slate-500 mb-6">
+          {message || 'Profile data is being fetched from Google Maps. This usually takes a few minutes after deployment.'}
         </p>
-        <a
-          href={PROFILE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-        >
-          View Profile on Google Maps
-        </a>
+        {lastUpdated && (
+          <p className="text-xs text-slate-400 mb-6">
+            Last attempt: {new Date(lastUpdated).toLocaleString()}
+          </p>
+        )}
+        <div className="space-y-3">
+          <a
+            href={PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            View Profile on Google Maps
+          </a>
+          <a
+            href="https://github.com/ScoposCommunications/localguide/actions/workflows/scrape-profile.yml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full px-6 py-3 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            Check Sync Status
+          </a>
+        </div>
+        <p className="text-xs text-slate-400 mt-6">
+          Data syncs automatically every day at 6 AM UTC
+        </p>
       </div>
     </div>
   );
@@ -45,7 +63,7 @@ function Portfolio() {
 
   // Show error if scrape failed
   if (!data || !data.scrapedSuccessfully) {
-    return <ScrapeError message={data?.error} />;
+    return <ScrapeError message={data?.error} lastUpdated={data?.lastUpdated} />;
   }
 
   const filteredPhotos = data.photos?.filter(photo => {
