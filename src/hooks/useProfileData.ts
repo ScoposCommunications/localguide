@@ -7,6 +7,9 @@ export interface Photo {
   id: string;
   url: string;
   thumbnail: string;
+  placeName?: string | null;
+  placeUrl?: string | null;
+  rating?: number | null;
 }
 
 export interface ProfileData {
@@ -16,6 +19,9 @@ export interface ProfileData {
   totalViews: number | null;
   totalPhotos: number | null;
   totalReviews: number | null;
+  points?: number | null;
+  localGuide?: boolean;
+  thumbnailUrl?: string | null;
   profileUrl: string;
   photos: Photo[];
   lastUpdated: string | null;

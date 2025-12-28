@@ -2,8 +2,8 @@ name: Scrape Google Maps Profile
 
 on:
   schedule:
-    - cron: '0 6 * * *'
-  workflow_dispatch:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:  # Manual trigger
   push:
     branches:
       - main
@@ -22,10 +22,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Puppeteer
-        run: npm install puppeteer
-
       - name: Run scraper
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         run: node scripts/scrape-profile.js
 
       - name: Commit and push if changed
