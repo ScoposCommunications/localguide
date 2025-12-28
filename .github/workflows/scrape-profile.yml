@@ -26,9 +26,40 @@ jobs:
         run: npm install puppeteer
 
       - name: Run scraper
+        id: scrape
+        continue-on-error: true
         run: node scripts/scrape-profile.js
 
+      - name: Upload debug artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scrape-debug
+          path: |
+            debug-screenshots/
+            src/data/profile.json
+          retention-days: 7
+
+      - name: Check scrape result
+        run: |
+          if [ -f src/data/profile.json ]; then
+            echo "Profile data:"
+            cat src/data/profile.json
+
+            # Check if scraping was successful
+            SUCCESS=$(node -e "const d = require('./src/data/profile.json'); console.log(d.scrapedSuccessfully || false)")
+            echo "Scrape successful: $SUCCESS"
+
+            if [ "$SUCCESS" != "true" ]; then
+              echo "::warning::Scraping did not extract data successfully. Check debug artifacts."
+            fi
+          else
+            echo "::error::profile.json not found!"
+            exit 1
+          fi
+
       - name: Commit and push if changed
+        if: steps.scrape.outcome == 'success'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
