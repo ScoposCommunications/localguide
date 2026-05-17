@@ -1,24 +1,14 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Composer
+/vendor/
 
-node_modules
-dist
-dist-ssr
-*.local
+# PHPUnit
+/.phpunit.cache/
+.phpunit.result.cache
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Local SQLite databases produced by the CLI smoke test
+*.sqlite
+*.sqlite-journal
+
+# OS / editor noise
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.swp

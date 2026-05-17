@@ -1,0 +1,32 @@
+{
+    "questions": [
+        {
+            "place_name": "Powell's City of Books",
+            "place_address": "1005 W Burnside St, Portland, OR 97209, USA",
+            "place_url": "https://www.google.com/maps/place/?q=place_id:ChIJq0001PowellsBooks",
+            "question_text": "Is there a cafe inside the store, and does it have seating for laptop work?",
+            "date": "2019-02-11",
+            "location": { "latitude": 45.5230503, "longitude": -122.6814674 }
+        },
+        {
+            "placeUrl": "https://www.google.com/maps/place/?q=place_id:ChIJq0002BotanicalGarden",
+            "name": "Reykjavik Botanical Garden",
+            "address": "Laugardalur, 104 Reykjavik, Iceland",
+            "Question Text": "Are the greenhouses open to visitors during the winter months?",
+            "published_date": "2022-10-08",
+            "latitude": 64.1392001,
+            "longitude": -21.8742999
+        },
+        {
+            "google_maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJq0003GardensByTheBay",
+            "location": {
+                "name": "Gardens by the Bay",
+                "address": "18 Marina Gardens Dr, Singapore 018953",
+                "latitude": 1.2815683,
+                "longitude": 103.8636132
+            },
+            "question": "How long does it take to walk through the Cloud Forest dome at a relaxed pace?",
+            "asked_date": "2024-08-19"
+        }
+    ]
+}
