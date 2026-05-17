@@ -14,8 +14,14 @@ use Exception;
  *
  * Takeout dates show up as ISO-8601 strings (with or without a timezone),
  * bare `Y-m-d` strings, and Unix timestamps in seconds or milliseconds — often
- * quoted as strings. Anything unrecognized (or absent) normalizes to the Unix
- * epoch, an unambiguous "no date" sentinel; see DECISIONS.md (D12).
+ * quoted as strings.
+ *
+ * Two entry points:
+ *  - {@see tryParse()} returns null when the value cannot be parsed. The type
+ *    parsers use this and skip date-less records rather than inventing a date
+ *    (see DECISIONS.md D14).
+ *  - {@see parse()} is the lenient variant: it falls back to the Unix epoch
+ *    instead of returning null, for callers that need a guaranteed date.
  */
 final class DateParser
 {
@@ -26,9 +32,10 @@ final class DateParser
     }
 
     /**
-     * Normalize any Takeout date value to a UTC DateTimeImmutable.
+     * Normalize a Takeout date value to a UTC DateTimeImmutable, or return
+     * null when the value is absent, empty, or unparseable.
      */
-    public static function parse(mixed $value): DateTimeImmutable
+    public static function tryParse(mixed $value): ?DateTimeImmutable
     {
         if ($value instanceof DateTimeImmutable) {
             return $value->setTimezone(new DateTimeZone('UTC'));
@@ -41,18 +48,25 @@ final class DateParser
         if (is_string($value)) {
             $value = trim($value);
             if ($value === '') {
-                return self::epoch();
+                return null;
             }
             if (self::looksLikeTimestamp($value)) {
                 return self::fromTimestamp((int) $value);
             }
-            $parsed = self::fromString($value);
-            if ($parsed !== null) {
-                return $parsed;
-            }
+
+            return self::fromString($value);
         }
 
-        return self::epoch();
+        return null;
+    }
+
+    /**
+     * Lenient variant of {@see tryParse()}: returns the Unix epoch instead of
+     * null when the value cannot be parsed.
+     */
+    public static function parse(mixed $value): DateTimeImmutable
+    {
+        return self::tryParse($value) ?? self::epoch();
     }
 
     /**

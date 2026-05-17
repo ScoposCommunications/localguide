@@ -19,9 +19,9 @@ final class PhotosParserTest extends TestCase
     {
         $result = (new PhotosParser())->parse(['photos' => [$photo]]);
 
-        self::assertCount(1, $result);
+        self::assertCount(1, $result->contributions);
 
-        return $result[0];
+        return $result->contributions[0];
     }
 
     public function test_photo_title_becomes_the_place_name(): void
@@ -120,7 +120,7 @@ final class PhotosParserTest extends TestCase
 
     public function test_skips_photos_without_coordinates(): void
     {
-        $result = (new PhotosParser())->parse(['photos' => [
+        $contributions = (new PhotosParser())->parse(['photos' => [
             [
                 'title' => 'no-location.jpg',
                 'imageViews' => '5',
@@ -132,33 +132,57 @@ final class PhotosParserTest extends TestCase
                 'photoTakenTime' => ['timestamp' => '1592234100'],
                 'geoDataExif' => ['latitude' => 1.0, 'longitude' => 2.0],
             ],
+        ]])->contributions;
+
+        self::assertCount(1, $contributions);
+        self::assertSame('located.jpg', $contributions[0]->placeName);
+    }
+
+    public function test_skips_a_record_with_no_parseable_date(): void
+    {
+        $result = (new PhotosParser())->parse(['photos' => [
+            [
+                'title' => 'dateless.jpg',
+                'imageViews' => '5',
+                'geoDataExif' => ['latitude' => 1.0, 'longitude' => 2.0],
+            ],
+            [
+                'title' => 'dated.jpg',
+                'imageViews' => '9',
+                'photoTakenTime' => ['timestamp' => '1592234100'],
+                'geoDataExif' => ['latitude' => 3.0, 'longitude' => 4.0],
+            ],
         ]]);
 
-        self::assertCount(1, $result);
-        self::assertSame('located.jpg', $result[0]->placeName);
+        self::assertCount(1, $result->contributions);
+        self::assertSame('dated.jpg', $result->contributions[0]->placeName);
+        self::assertSame(
+            ["Skipped photo 'dateless.jpg' — no parseable date"],
+            $result->errors,
+        );
     }
 
     public function test_parses_a_bare_list_of_photos(): void
     {
-        $result = (new PhotosParser())->parse([[
+        $contributions = (new PhotosParser())->parse([[
             'title' => 'listed.jpg',
             'imageViews' => '7',
             'photoTakenTime' => ['timestamp' => '1592234100'],
             'geoDataExif' => ['latitude' => 1.0, 'longitude' => 2.0],
-        ]]);
+        ]])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('listed.jpg', $result[0]->placeName);
+        self::assertCount(1, $contributions);
+        self::assertSame('listed.jpg', $contributions[0]->placeName);
     }
 
     public function test_parses_the_photos_fixture(): void
     {
-        $result = (new PhotosParser())->parse($this->fixture('photos.json'));
+        $contributions = (new PhotosParser())->parse($this->fixture('photos.json'))->contributions;
 
-        self::assertCount(4, $result);
+        self::assertCount(4, $contributions);
 
         $byTitle = [];
-        foreach ($result as $contribution) {
+        foreach ($contributions as $contribution) {
             self::assertSame(ContributionType::Photo, $contribution->type);
             $byTitle[$contribution->placeName] = $contribution;
         }

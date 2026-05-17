@@ -26,9 +26,9 @@ final class StarredParserTest extends TestCase
             ]],
         ]);
 
-        self::assertCount(1, $result);
+        self::assertCount(1, $result->contributions);
 
-        return $result[0];
+        return $result->contributions[0];
     }
 
     public function test_starred_places_have_no_rating_or_review_text(): void
@@ -49,10 +49,12 @@ final class StarredParserTest extends TestCase
         $nested = $this->parseOne([
             'location' => ['name' => 'Nested Place'],
             'google_maps_url' => 'https://maps/x',
+            'date' => '2020-01-01',
         ]);
         $flat = $this->parseOne([
             'name' => 'Flat Place',
             'google_maps_url' => 'https://maps/x',
+            'date' => '2020-01-01',
         ]);
 
         self::assertSame('Nested Place', $nested->placeName);
@@ -65,6 +67,7 @@ final class StarredParserTest extends TestCase
             'Title' => 'Capitalized Place',
             'URL' => 'https://maps/caps',
             'Address' => '1 Capital Street',
+            'Date' => '2020-01-01',
         ]);
 
         self::assertSame('Capitalized Place', $contribution->placeName);
@@ -74,43 +77,65 @@ final class StarredParserTest extends TestCase
 
     public function test_skips_entries_at_zero_coordinates(): void
     {
-        $result = (new StarredParser())->parse(['features' => [
+        $contributions = (new StarredParser())->parse(['features' => [
             [
                 'geometry' => ['coordinates' => [0, 0]],
-                'properties' => ['name' => 'Skip Me', 'google_maps_url' => 'u'],
+                'properties' => ['name' => 'Skip Me', 'google_maps_url' => 'u', 'date' => '2020-01-01'],
             ],
             [
                 'geometry' => ['coordinates' => [3.0, 4.0]],
-                'properties' => ['name' => 'Keep Me', 'google_maps_url' => 'u2'],
+                'properties' => ['name' => 'Keep Me', 'google_maps_url' => 'u2', 'date' => '2020-01-01'],
+            ],
+        ]])->contributions;
+
+        self::assertCount(1, $contributions);
+        self::assertSame('Keep Me', $contributions[0]->placeName);
+    }
+
+    public function test_skips_a_record_with_no_parseable_date(): void
+    {
+        $result = (new StarredParser())->parse(['features' => [
+            [
+                'geometry' => ['coordinates' => [1.0, 2.0]],
+                'properties' => ['name' => 'Dateless Place', 'google_maps_url' => 'https://maps/x'],
+            ],
+            [
+                'geometry' => ['coordinates' => [3.0, 4.0]],
+                'properties' => ['name' => 'Dated Place', 'google_maps_url' => 'https://maps/y', 'date' => '2020-01-01'],
             ],
         ]]);
 
-        self::assertCount(1, $result);
-        self::assertSame('Keep Me', $result[0]->placeName);
+        self::assertCount(1, $result->contributions);
+        self::assertSame('Dated Place', $result->contributions[0]->placeName);
+        self::assertSame(
+            ["Skipped starred 'Dateless Place' — no parseable date"],
+            $result->errors,
+        );
     }
 
     public function test_parses_a_single_flat_starred_object(): void
     {
-        $result = (new StarredParser())->parse([
+        $contributions = (new StarredParser())->parse([
             'name' => 'Solo Place',
             'url' => 'https://maps/solo',
+            'date' => '2020-01-01',
             'latitude' => 48.8,
             'longitude' => 2.3,
-        ]);
+        ])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('Solo Place', $result[0]->placeName);
-        self::assertSame(48.8, $result[0]->lat);
+        self::assertCount(1, $contributions);
+        self::assertSame('Solo Place', $contributions[0]->placeName);
+        self::assertSame(48.8, $contributions[0]->lat);
     }
 
     public function test_parses_the_starred_fixture(): void
     {
-        $result = (new StarredParser())->parse($this->fixture('starred.json'));
+        $contributions = (new StarredParser())->parse($this->fixture('starred.json'))->contributions;
 
-        self::assertCount(4, $result);
+        self::assertCount(4, $contributions);
 
-        $names = array_map(static fn (Contribution $c): string => $c->placeName, $result);
-        foreach ($result as $contribution) {
+        $names = array_map(static fn (Contribution $c): string => $c->placeName, $contributions);
+        foreach ($contributions as $contribution) {
             self::assertSame(ContributionType::Starred, $contribution->type);
         }
 

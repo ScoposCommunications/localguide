@@ -19,9 +19,9 @@ final class QuestionsParserTest extends TestCase
     {
         $result = (new QuestionsParser())->parse(['questions' => [$question]]);
 
-        self::assertCount(1, $result);
+        self::assertCount(1, $result->contributions);
 
-        return $result[0];
+        return $result->contributions[0];
     }
 
     public function test_question_text_is_stored_in_review_text(): void
@@ -96,12 +96,14 @@ final class QuestionsParserTest extends TestCase
             'place_name' => 'P',
             'place_url' => 'u',
             'question_text' => 'q?',
+            'date' => '2020-01-01',
             'location' => ['latitude' => 1.5, 'longitude' => 2.5],
         ]);
         $flat = $this->parseOne([
             'place_name' => 'P',
             'place_url' => 'u',
             'question_text' => 'q?',
+            'date' => '2020-01-01',
             'latitude' => 3.5,
             'longitude' => 4.5,
         ]);
@@ -112,43 +114,73 @@ final class QuestionsParserTest extends TestCase
 
     public function test_skips_questions_without_coordinates(): void
     {
-        $result = (new QuestionsParser())->parse(['questions' => [
-            ['place_name' => 'No Coords', 'place_url' => 'u', 'question_text' => 'q?'],
+        $contributions = (new QuestionsParser())->parse(['questions' => [
+            ['place_name' => 'No Coords', 'place_url' => 'u', 'question_text' => 'q?', 'date' => '2020-01-01'],
             [
                 'place_name' => 'Has Coords',
                 'place_url' => 'u2',
                 'question_text' => 'q?',
+                'date' => '2020-01-01',
                 'latitude' => 1.0,
                 'longitude' => 2.0,
             ],
+        ]])->contributions;
+
+        self::assertCount(1, $contributions);
+        self::assertSame('Has Coords', $contributions[0]->placeName);
+    }
+
+    public function test_skips_a_record_with_no_parseable_date(): void
+    {
+        $result = (new QuestionsParser())->parse(['questions' => [
+            [
+                'place_name' => 'Dateless Place',
+                'place_url' => 'https://maps/x',
+                'question_text' => 'A question with no date?',
+                'latitude' => 1.0,
+                'longitude' => 2.0,
+            ],
+            [
+                'place_name' => 'Dated Place',
+                'place_url' => 'https://maps/y',
+                'question_text' => 'A question with a date?',
+                'date' => '2020-01-01',
+                'latitude' => 3.0,
+                'longitude' => 4.0,
+            ],
         ]]);
 
-        self::assertCount(1, $result);
-        self::assertSame('Has Coords', $result[0]->placeName);
+        self::assertCount(1, $result->contributions);
+        self::assertSame('Dated Place', $result->contributions[0]->placeName);
+        self::assertSame(
+            ["Skipped question 'Dateless Place' — no parseable date"],
+            $result->errors,
+        );
     }
 
     public function test_parses_a_single_flat_question_object(): void
     {
-        $result = (new QuestionsParser())->parse([
+        $contributions = (new QuestionsParser())->parse([
             'place_name' => 'Solo Question Place',
             'place_url' => 'u',
             'question_text' => 'Solo?',
+            'date' => '2020-01-01',
             'latitude' => 1.0,
             'longitude' => 2.0,
-        ]);
+        ])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('Solo Question Place', $result[0]->placeName);
+        self::assertCount(1, $contributions);
+        self::assertSame('Solo Question Place', $contributions[0]->placeName);
     }
 
     public function test_parses_the_questions_fixture(): void
     {
-        $result = (new QuestionsParser())->parse($this->fixture('questions.json'));
+        $contributions = (new QuestionsParser())->parse($this->fixture('questions.json'))->contributions;
 
-        self::assertCount(3, $result);
+        self::assertCount(3, $contributions);
 
         $byName = [];
-        foreach ($result as $contribution) {
+        foreach ($contributions as $contribution) {
             self::assertSame(ContributionType::Question, $contribution->type);
             self::assertNull($contribution->rating);
             $byName[$contribution->placeName] = $contribution;

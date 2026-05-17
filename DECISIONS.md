@@ -227,3 +227,143 @@ for the direct-file path).
 emitted with a `.geojson` extension. Accepting both everywhere is strictly more
 tolerant, costs nothing, and removes a way for a real export to silently lose
 data. Type detection does not depend on the extension regardless.
+
+---
+
+## D14 — Date-less records are skipped, not dated to the epoch (reverses D12)
+
+**Decision:** When a Takeout record has no parseable date, the type parsers now
+**skip the contribution entirely** and record an error
+`Skipped {type} '{place_name}' — no parseable date`, instead of substituting
+the Unix epoch as D12 prescribed.
+
+**Why:** Review feedback on PR #2 flagged the epoch default as a
+stats-pollution risk. A contribution dated 1970-01-01 silently drags down
+`MIN(date)`, widens every "earliest … latest" range, and drops a fake point on
+any timeline — all from data Google never actually gave us. A handful of
+genuinely date-less records is better dropped (and reported) than kept with a
+fabricated date that quietly corrupts every aggregate. `Contribution::$date`
+stays a non-nullable `DateTimeImmutable`, so every *stored* contribution still
+has a real date.
+
+**Mechanics:** `DateParser::tryParse()` was added — it returns `null` instead
+of the epoch when a value cannot be parsed. The parsers call `tryParse()` and
+skip on `null`. `DateParser::parse()` is kept as the lenient epoch-fallback
+variant for any caller that needs a guaranteed date. To carry the new skip
+errors out of the (previously array-returning) type parsers, their `parse()`
+now returns a `TypeParseResult` value object `{ contributions, errors }`, which
+`TakeoutParser` merges into the file-level `ParseResult`.
+
+---
+
+## D15 — `HttpClient` has a `download()` method alongside `request()`
+
+**Decision:** The `Http\HttpClient` interface declares two methods —
+`request()` (returns an in-memory `HttpResponse`) and `download()` (streams the
+response body straight to a file path).
+
+**Why:** Phase 9 described `HttpClient` as "one method", but Phase 11 requires
+`DriveClient::downloadFile()` to stream a Takeout zip to disk "to avoid loading
+the whole ZIP into memory", and `DriveClient` depends only on the `HttpClient`
+interface. A streaming capability therefore has to live on that interface — an
+in-memory `request()` cannot satisfy the explicit no-buffering requirement. The
+detailed, rationale-backed instruction wins over the "one method" sketch.
+`CurlHttpClient::download()` uses `CURLOPT_FILE`; `FakeHttpClient::download()`
+writes the canned body to the path.
+
+---
+
+## D16 — Test doubles live in `src/`, not `tests/`
+
+**Decision:** `FakeHttpClient`, `FrozenClock`, `InMemoryTokenCache`, and
+`InMemoryProcessedFilesStore` are production classes under `src/`, beside the
+interfaces they implement — not test-only helpers under `tests/`.
+
+**Why:** The brief explicitly places these classes in `src/`, and that is the
+right call: the in-memory implementations are genuinely useful outside of unit
+tests — the Phase 13 CLI sync simulator runs the whole orchestrator on
+`FakeHttpClient` with no test framework involved, and a future WordPress
+"dry-run" mode could reuse them too. They are part of the library's public
+surface, so they are versioned, autoloaded, and documented like any other
+class.
+
+---
+
+## D17 — `FakeHttpClient` matches canned responses by URL prefix, with queues
+
+**Decision:** `FakeHttpClient` is constructed with responses keyed by
+`"{METHOD} {URL}"`. A request is matched to the **longest registered key that
+is a prefix of** its `"{METHOD} {URL}"` string. A key may map to a single
+response or to a list of responses returned in sequence (the last one repeats).
+
+**Why:** Exact-string matching would force every test to reproduce Google's
+exact query-string encoding (`q=...&fields=...&pageSize=...`), making tests
+brittle against harmless query tweaks. Prefix matching lets a test register
+`"GET https://www.googleapis.com/drive/v3/files"` and have it answer the real,
+fully-parameterized request. Response queues make pagination testable: the
+Drive list endpoint is hit twice (page 1, then page 2 with a `pageToken`) and
+both requests prefix-match the same key, so a two-element queue returns page 1
+then page 2. The constructor still takes an `array` keyed by `"{METHOD} {URL}"`
+exactly as the brief specified.
+
+---
+
+## D18 — Streaming downloads keep Takeout zips out of PHP memory
+
+**Decision:** `DriveClient::downloadFile()` streams the file to disk via
+`HttpClient::download()` rather than fetching it into a string and writing that
+string out.
+
+**Why:** A Google Takeout export can be hundreds of megabytes. Buffering it in
+a PHP string risks exhausting `memory_limit`, and on shared WordPress hosting
+`memory_limit` is often low. `CURLOPT_FILE` hands cURL an open file handle so
+bytes go disk-to-disk and peak memory stays flat regardless of export size.
+
+---
+
+## D19 — Processed-file dedup is keyed on the Drive file id
+
+**Decision:** `SyncOrchestrator` records which Drive files it has already
+imported in a `ProcessedFilesStore`, keyed by the **Drive file id**. A file
+whose id is already in the store is skipped without being downloaded.
+
+**Why:** The Drive file id is stable and unique for the lifetime of the file,
+so it is the cheapest reliable "have I seen this?" key — the check happens
+before any download, so re-syncs cost one Drive list call and nothing else.
+This is a coarse, file-level guard that complements (does not replace) the
+contribution-level SHA-256 dedup (D4): even if the same file were processed
+twice, the repository's `INSERT OR IGNORE` still prevents duplicate rows. Two
+independent layers, cheap at the file level and exact at the row level.
+
+---
+
+## D20 — The sync layer stays as framework-free as the parser
+
+**Decision:** Everything added in Phases 9–13 (`Http`, `Clock`, `OAuth`,
+`Drive`, `Sync`) lives under `src/` with no WordPress dependency, mirroring the
+parser/storage layers. WordPress-specific implementations
+(`WpOptionsTokenCache`, `WpOptionsProcessedFilesStore`, an admin OAuth callback)
+are explicitly deferred to the future adapter layer.
+
+**Why:** The same reasoning as D1/D10: the hard logic — token refresh with an
+expiry buffer, Drive pagination, sync orchestration with per-file error
+isolation — is verified from the command line with `FrozenClock` and
+`FakeHttpClient`, with no CMS, no network, and no credentials. The WordPress
+adapter then only has to supply two small persistence classes and wire an
+OAuth redirect URL; the orchestration it calls into is already proven.
+
+---
+
+## D21 — `SyncResult` carries a `syncedAt` timestamp
+
+**Decision:** `SyncResult` has a sixth field beyond the five Phase 12 listed —
+`syncedAt`, a `DateTimeImmutable` — set from the injected `Clock`.
+
+**Why:** Phase 12 injects a `Clock` into `SyncOrchestrator`, but its five listed
+`SyncResult` fields gave that clock nothing to do. An unused injected
+dependency is a worse outcome than a sixth field. "When did this sync run" is
+the obvious, genuine time-related fact a sync result should carry — useful for
+logging and for a future "only files modified since the last sync"
+optimisation — and stamping it from the `Clock` (rather than a bare
+`new DateTimeImmutable()`) keeps the orchestrator fully deterministic under
+`FrozenClock` in tests, which is the whole reason a `Clock` is injected at all.

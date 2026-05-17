@@ -14,6 +14,10 @@ use GuideMap\ContributionType;
  * This file is GeoJSON: a `FeatureCollection` whose features carry a place
  * name, address and URL but no rating or review text. Bare lists and
  * single-object inputs are also accepted.
+ *
+ * A record at 0,0 is skipped silently; a record with no parseable date is
+ * skipped with an error recorded in the {@see TypeParseResult} (DECISIONS.md
+ * D14).
  */
 final class StarredParser
 {
@@ -44,48 +48,48 @@ final class StarredParser
 
     /**
      * @param array<string, mixed> $data decoded JSON of one Starred file
-     *
-     * @return list<Contribution>
      */
-    public function parse(array $data): array
+    public function parse(array $data): TypeParseResult
     {
         $contributions = [];
+        $errors = [];
+
         foreach ($this->records($data) as $record) {
-            $contribution = $this->toContribution($record);
-            if ($contribution !== null) {
-                $contributions[] = $contribution;
+            $props = (isset($record['properties']) && is_array($record['properties']))
+                ? $record['properties']
+                : $record;
+
+            [$lat, $lng] = Coordinates::resolve($record, $props);
+            if ($lat === 0.0 && $lng === 0.0) {
+                continue;
             }
+
+            $placeName = PropertyFinder::findString($props, self::NAME_KEYS) ?? '';
+            $date = DateParser::tryParse(PropertyFinder::find($props, self::DATE_KEYS));
+            if ($date === null) {
+                $errors[] = sprintf(
+                    "Skipped %s '%s' — no parseable date",
+                    ContributionType::Starred->value,
+                    $placeName,
+                );
+                continue;
+            }
+
+            $contributions[] = Contribution::create(
+                placeName: $placeName,
+                placeAddress: PropertyFinder::findString($props, self::ADDRESS_KEYS) ?? '',
+                lat: $lat,
+                lng: $lng,
+                googleMapsUrl: PropertyFinder::findString($props, self::URL_KEYS) ?? '',
+                type: ContributionType::Starred,
+                rating: null,
+                reviewText: null,
+                date: $date,
+                photoViews: 0,
+            );
         }
 
-        return $contributions;
-    }
-
-    /**
-     * @param array<string, mixed> $record
-     */
-    private function toContribution(array $record): ?Contribution
-    {
-        $props = (isset($record['properties']) && is_array($record['properties']))
-            ? $record['properties']
-            : $record;
-
-        [$lat, $lng] = Coordinates::resolve($record, $props);
-        if ($lat === 0.0 && $lng === 0.0) {
-            return null;
-        }
-
-        return Contribution::create(
-            placeName: PropertyFinder::findString($props, self::NAME_KEYS) ?? '',
-            placeAddress: PropertyFinder::findString($props, self::ADDRESS_KEYS) ?? '',
-            lat: $lat,
-            lng: $lng,
-            googleMapsUrl: PropertyFinder::findString($props, self::URL_KEYS) ?? '',
-            type: ContributionType::Starred,
-            rating: null,
-            reviewText: null,
-            date: DateParser::parse(PropertyFinder::find($props, self::DATE_KEYS)),
-            photoViews: 0,
-        );
+        return new TypeParseResult($contributions, $errors);
     }
 
     /**

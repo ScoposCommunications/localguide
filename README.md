@@ -4,27 +4,33 @@ GuideMap Pro turns a Google Takeout "Maps" export into a clean, deduplicated,
 queryable store of a person's map contributions — their reviews, photos,
 starred places, and questions. This repository contains the **core library**:
 framework-free PHP that parses the (notoriously inconsistent) Takeout JSON,
-normalizes it, and persists it. It is the foundation a WordPress plugin will
-later be built on top of, with only a thin integration layer added — no
-rewrites of the parsing or storage logic.
+normalizes it, persists it, and can pull exports automatically from Google
+Drive. It is the foundation a WordPress plugin will later be built on top of,
+with only a thin integration layer added — no rewrites of the parsing,
+storage, or sync logic.
 
 ## Current state
 
 **Core PHP library — no WordPress integration yet.**
 
-What exists today:
+What exists today, all framework-free under `src/`:
 
-- A tolerant parser (`GuideMap\Parser\TakeoutParser`) that accepts a Takeout
-  `.zip` or a single `.json`/`.geojson` file, copes with every Takeout
+- A tolerant **parser** (`GuideMap\Parser\TakeoutParser`) that accepts a
+  Takeout `.zip` or a single `.json`/`.geojson` file, copes with every Takeout
   field-name variant we have seen, and returns normalized value objects.
-- A storage layer (`GuideMap\Storage\ContributionRepository`) with a
+- A **storage layer** (`GuideMap\Storage\ContributionRepository`) with a
   SQLite implementation for local development, plus a MySQL-compatible schema
   ready for production.
-- A full PHPUnit test suite and a command-line smoke test.
+- An **automation layer** that fetches exports straight from Google Drive:
+  OAuth token refresh (`GoogleTokenProvider`), a Drive v3 client
+  (`DriveClient`), and a `SyncOrchestrator` that lists a Drive folder,
+  downloads each new export, parses it, and stores it. HTTP and time sit
+  behind interfaces, so the whole flow is tested with no network.
+- A PHPUnit suite of 200+ tests and two command-line smoke tests.
 
 What does **not** exist yet (by design): the WordPress plugin, its admin
-screens, shortcodes/blocks, the `$wpdb`-backed repository, and any OAuth or
-upload handling. See the roadmap below.
+screens, shortcodes/blocks, the `$wpdb`-backed repository, and the OAuth
+*callback* that first acquires a refresh token. See the roadmap below.
 
 ## Roadmap
 
@@ -36,9 +42,11 @@ concrete technical choices is in **[DECISIONS.md](DECISIONS.md)**.
 Next milestones, in order:
 
 1. `WpdbContributionRepository` — the same `ContributionRepository` interface,
-   backed by WordPress's `$wpdb` and the MySQL schema.
-2. WordPress plugin shell — activation hook (creates the table), an admin
-   uploader for the Takeout export, capability/nonce checks.
+   backed by WordPress's `$wpdb` and the MySQL schema; plus `$wpdb`/options
+   implementations of `TokenCache` and `ProcessedFilesStore`.
+2. WordPress plugin shell — activation hook (creates the table), the OAuth
+   consent/callback endpoint, a WP-Cron trigger for `SyncOrchestrator`, an
+   admin uploader for manual imports, capability/nonce checks.
 3. Front-end rendering — shortcodes/blocks for a map and a contribution grid.
 
 ## Requirements
@@ -84,13 +92,28 @@ No real export handy? A bundled sample needs no personal data:
 php scripts/parse-takeout.php fixtures/takeout-sample.zip
 ```
 
+## Simulating a Google Drive sync
+
+The Drive sync runs end to end with no network and no credentials — against an
+in-process fake Drive that serves the bundled sample export:
+
+```bash
+php scripts/sync-simulator.php
+```
+
+It runs the real `SyncOrchestrator` twice — a fresh sync, then an idempotent
+re-sync — and prints the `SyncResult` of each, proving the OAuth → Drive →
+parse → store → dedup pipeline without any Google account.
+
 ## Project layout
 
 ```
 src/         Framework-free core library (PSR-4: GuideMap\)
-tests/       PHPUnit test suite
+               Parser/ Storage/ Http/ Clock/ OAuth/ Drive/ Sync/
+tests/       PHPUnit test suite, mirroring src/
 fixtures/    Realistic sample Takeout JSON + a sample export zip
-scripts/     CLI smoke test (parse-takeout.php) and the sample-zip builder
+scripts/     CLI smoke tests (parse-takeout.php, sync-simulator.php)
+               and the sample-zip builder (build-sample-zip.php)
 docs/        Supplementary reference documentation
 _archive/    The previous React/Vercel scraper, kept for reference only
 ```

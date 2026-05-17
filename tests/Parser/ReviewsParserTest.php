@@ -29,9 +29,9 @@ final class ReviewsParserTest extends TestCase
             ]],
         ]);
 
-        self::assertCount(1, $result);
+        self::assertCount(1, $result->contributions);
 
-        return $result[0];
+        return $result->contributions[0];
     }
 
     #[DataProvider('ratingFieldVariants')]
@@ -141,7 +141,7 @@ final class ReviewsParserTest extends TestCase
                 'five_star_rating_published' => 4,
                 'review_text_published' => 'Same review body.',
             ],
-        ]]]);
+        ]]])->contributions;
 
         $legacy = (new ReviewsParser())->parse(['features' => [[
             'geometry' => ['coordinates' => [4.5, 6.7]],
@@ -153,7 +153,7 @@ final class ReviewsParserTest extends TestCase
                 'star_rating' => 4,
                 'review_text' => 'Same review body.',
             ],
-        ]]]);
+        ]]])->contributions;
 
         self::assertEquals($modern[0], $legacy[0]);
     }
@@ -171,7 +171,7 @@ final class ReviewsParserTest extends TestCase
 
     public function test_skips_entries_at_zero_coordinates(): void
     {
-        $result = (new ReviewsParser())->parse(['features' => [
+        $contributions = (new ReviewsParser())->parse(['features' => [
             [
                 'geometry' => ['coordinates' => [0, 0]],
                 'properties' => ['name' => 'Skip Me', 'google_maps_url' => 'u', 'date' => '2020-01-01', 'star_rating' => 3],
@@ -180,37 +180,69 @@ final class ReviewsParserTest extends TestCase
                 'geometry' => ['coordinates' => [1.0, 2.0]],
                 'properties' => ['name' => 'Keep Me', 'google_maps_url' => 'u2', 'date' => '2020-01-01', 'star_rating' => 4],
             ],
+        ]])->contributions;
+
+        self::assertCount(1, $contributions);
+        self::assertSame('Keep Me', $contributions[0]->placeName);
+    }
+
+    public function test_skips_a_record_with_no_parseable_date(): void
+    {
+        $result = (new ReviewsParser())->parse(['features' => [
+            [
+                'geometry' => ['coordinates' => [1.0, 2.0]],
+                'properties' => [
+                    'name' => 'Dateless Diner',
+                    'google_maps_url' => 'https://maps/x',
+                    'star_rating' => 4,
+                    'review_text' => 'This record carries no date field at all.',
+                ],
+            ],
+            [
+                'geometry' => ['coordinates' => [3.0, 4.0]],
+                'properties' => [
+                    'name' => 'Dated Bistro',
+                    'google_maps_url' => 'https://maps/y',
+                    'date' => '2020-01-01',
+                    'star_rating' => 5,
+                    'review_text' => 'This one has a date.',
+                ],
+            ],
         ]]);
 
-        self::assertCount(1, $result);
-        self::assertSame('Keep Me', $result[0]->placeName);
+        self::assertCount(1, $result->contributions);
+        self::assertSame('Dated Bistro', $result->contributions[0]->placeName);
+        self::assertSame(
+            ["Skipped review 'Dateless Diner' — no parseable date"],
+            $result->errors,
+        );
     }
 
     public function test_parses_a_reviews_wrapper_object(): void
     {
-        $result = (new ReviewsParser())->parse(['reviews' => [[
+        $contributions = (new ReviewsParser())->parse(['reviews' => [[
             'name' => 'Wrapped', 'url' => 'u', 'date' => '2020-01-01',
             'star_rating' => 5, 'review_text' => 't', 'latitude' => 1.0, 'longitude' => 2.0,
-        ]]]);
+        ]]])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('Wrapped', $result[0]->placeName);
+        self::assertCount(1, $contributions);
+        self::assertSame('Wrapped', $contributions[0]->placeName);
     }
 
     public function test_parses_a_bare_list_of_reviews(): void
     {
-        $result = (new ReviewsParser())->parse([[
+        $contributions = (new ReviewsParser())->parse([[
             'name' => 'Listed', 'url' => 'u', 'date' => '2020-01-01',
             'star_rating' => 5, 'review_text' => 't', 'latitude' => 1.0, 'longitude' => 2.0,
-        ]]);
+        ]])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('Listed', $result[0]->placeName);
+        self::assertCount(1, $contributions);
+        self::assertSame('Listed', $contributions[0]->placeName);
     }
 
     public function test_parses_a_single_flat_review_object(): void
     {
-        $result = (new ReviewsParser())->parse([
+        $contributions = (new ReviewsParser())->parse([
             'name' => 'Flat Place',
             'url' => 'https://maps/flat',
             'date' => '2020-02-02',
@@ -218,32 +250,32 @@ final class ReviewsParserTest extends TestCase
             'review_text' => 'Flat review.',
             'latitude' => 40.0,
             'longitude' => -70.0,
-        ]);
+        ])->contributions;
 
-        self::assertCount(1, $result);
-        self::assertSame('Flat Place', $result[0]->placeName);
-        self::assertSame(40.0, $result[0]->lat);
-        self::assertSame(-70.0, $result[0]->lng);
+        self::assertCount(1, $contributions);
+        self::assertSame('Flat Place', $contributions[0]->placeName);
+        self::assertSame(40.0, $contributions[0]->lat);
+        self::assertSame(-70.0, $contributions[0]->lng);
     }
 
     public function test_empty_input_yields_no_contributions(): void
     {
-        self::assertSame([], (new ReviewsParser())->parse([]));
-        self::assertSame([], (new ReviewsParser())->parse(['features' => []]));
+        self::assertSame([], (new ReviewsParser())->parse([])->contributions);
+        self::assertSame([], (new ReviewsParser())->parse(['features' => []])->contributions);
     }
 
     public function test_parses_the_reviews_fixture(): void
     {
-        $result = (new ReviewsParser())->parse($this->fixture('reviews.json'));
+        $contributions = (new ReviewsParser())->parse($this->fixture('reviews.json'))->contributions;
 
         // The fixture has 6 features; one sits at 0,0 and is skipped.
-        self::assertCount(5, $result);
-        foreach ($result as $contribution) {
+        self::assertCount(5, $contributions);
+        foreach ($contributions as $contribution) {
             self::assertSame(ContributionType::Review, $contribution->type);
         }
 
         $byName = [];
-        foreach ($result as $contribution) {
+        foreach ($contributions as $contribution) {
             $byName[$contribution->placeName] = $contribution;
         }
 
