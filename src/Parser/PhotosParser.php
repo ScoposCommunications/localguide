@@ -16,7 +16,9 @@ use GuideMap\ContributionType;
  * `{"photos": [...]}` wrapper, a bare list, or a single photo object.
  *
  * The photo's `title` is stored as the contribution's place name — it is the
- * field the photo deduplication hash is built from.
+ * field the photo deduplication hash is built from. A record at 0,0 is skipped
+ * silently; a record with no parseable date is skipped with an error recorded
+ * in the {@see TypeParseResult} (DECISIONS.md D14).
  */
 final class PhotosParser
 {
@@ -58,44 +60,44 @@ final class PhotosParser
 
     /**
      * @param array<string, mixed> $data decoded JSON of one Photos file
-     *
-     * @return list<Contribution>
      */
-    public function parse(array $data): array
+    public function parse(array $data): TypeParseResult
     {
         $contributions = [];
+        $errors = [];
+
         foreach ($this->records($data) as $record) {
-            $contribution = $this->toContribution($record);
-            if ($contribution !== null) {
-                $contributions[] = $contribution;
+            [$lat, $lng] = Coordinates::resolve($record, $record);
+            if ($lat === 0.0 && $lng === 0.0) {
+                continue;
             }
+
+            $title = PropertyFinder::findString($record, self::TITLE_KEYS) ?? '';
+            $date = DateParser::tryParse(PropertyFinder::find($record, self::DATE_KEYS));
+            if ($date === null) {
+                $errors[] = sprintf(
+                    "Skipped %s '%s' — no parseable date",
+                    ContributionType::Photo->value,
+                    $title,
+                );
+                continue;
+            }
+
+            $contributions[] = Contribution::create(
+                placeName: $title,
+                placeAddress: PropertyFinder::findString($record, self::ADDRESS_KEYS) ?? '',
+                lat: $lat,
+                lng: $lng,
+                googleMapsUrl: PropertyFinder::findString($record, self::URL_KEYS) ?? '',
+                type: ContributionType::Photo,
+                rating: null,
+                reviewText: null,
+                date: $date,
+                photoViews: PropertyFinder::findInt($record, self::VIEW_KEYS) ?? 0,
+            );
         }
 
-        return $contributions;
-    }
-
-    /**
-     * @param array<string, mixed> $record
-     */
-    private function toContribution(array $record): ?Contribution
-    {
-        [$lat, $lng] = Coordinates::resolve($record, $record);
-        if ($lat === 0.0 && $lng === 0.0) {
-            return null;
-        }
-
-        return Contribution::create(
-            placeName: PropertyFinder::findString($record, self::TITLE_KEYS) ?? '',
-            placeAddress: PropertyFinder::findString($record, self::ADDRESS_KEYS) ?? '',
-            lat: $lat,
-            lng: $lng,
-            googleMapsUrl: PropertyFinder::findString($record, self::URL_KEYS) ?? '',
-            type: ContributionType::Photo,
-            rating: null,
-            reviewText: null,
-            date: DateParser::parse(PropertyFinder::find($record, self::DATE_KEYS)),
-            photoViews: PropertyFinder::findInt($record, self::VIEW_KEYS) ?? 0,
-        );
+        return new TypeParseResult($contributions, $errors);
     }
 
     /**

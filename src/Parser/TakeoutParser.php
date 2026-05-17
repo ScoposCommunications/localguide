@@ -132,8 +132,12 @@ final class TakeoutParser
                 continue;
             }
 
-            foreach ($this->parseByType($type, $data) as $contribution) {
+            $parsed = $this->parseByType($type, $data);
+            foreach ($parsed->contributions as $contribution) {
                 $contributions[] = $contribution;
+            }
+            foreach ($parsed->errors as $error) {
+                $errors[] = $error;
             }
             $filesProcessed++;
         }
@@ -285,10 +289,8 @@ final class TakeoutParser
 
     /**
      * @param array<string, mixed> $data
-     *
-     * @return list<\GuideMap\Contribution>
      */
-    private function parseByType(ContributionType $type, array $data): array
+    private function parseByType(ContributionType $type, array $data): TypeParseResult
     {
         return match ($type) {
             ContributionType::Review => $this->reviewsParser->parse($data),

@@ -94,4 +94,24 @@ final class DateParserTest extends TestCase
     {
         self::assertSame(0, DateParser::epoch()->getTimestamp());
     }
+
+    public function test_try_parse_returns_a_date_for_a_valid_value(): void
+    {
+        $parsed = DateParser::tryParse('2021-03-22');
+
+        self::assertInstanceOf(DateTimeImmutable::class, $parsed);
+        self::assertSame('2021-03-22', $parsed->format('Y-m-d'));
+    }
+
+    public function test_try_parse_returns_null_for_a_missing_value(): void
+    {
+        self::assertNull(DateParser::tryParse(null));
+        self::assertNull(DateParser::tryParse(''));
+        self::assertNull(DateParser::tryParse('   '));
+    }
+
+    public function test_try_parse_returns_null_for_unparseable_text(): void
+    {
+        self::assertNull(DateParser::tryParse('xx-not-a-real-date-xx'));
+    }
 }
