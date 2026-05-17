@@ -1,0 +1,46 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [-122.0838511, 37.4220656] },
+            "properties": {
+                "google_maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJstar0001Googleplex",
+                "location": {
+                    "name": "Googleplex",
+                    "address": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA"
+                },
+                "date": "2016-04-12T00:00:00Z"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [12.4922309, 41.8902102] },
+            "properties": {
+                "url": "https://www.google.com/maps/place/?q=place_id:ChIJstar0002Colosseum",
+                "name": "Colosseum",
+                "address": "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
+                "Date": "2018-01-05"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [-3.7038269, 40.4153268] },
+            "properties": {
+                "googleMapsUrl": "https://www.google.com/maps/place/?q=place_id:ChIJstar0003SanMiguel",
+                "location": { "name": "Mercado de San Miguel" },
+                "published_date": "2022-07-19"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [151.2152967, -33.8567844] },
+            "properties": {
+                "URL": "https://www.google.com/maps/place/?q=place_id:ChIJstar0004OperaHouse",
+                "Title": "Sydney Opera House",
+                "Address": "Bennelong Point, Sydney NSW 2000, Australia",
+                "saved_date": "2025-02-28"
+            }
+        }
+    ]
+}

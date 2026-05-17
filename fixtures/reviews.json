@@ -1,0 +1,79 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [-122.4194155, 37.7749295] },
+            "properties": {
+                "google_maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJrev0001BlueBottle",
+                "location": {
+                    "name": "Blue Bottle Coffee",
+                    "address": "66 Mint St, San Francisco, CA 94103, USA",
+                    "country_code": "US"
+                },
+                "published_date": "2019-08-14T17:05:00Z",
+                "five_star_rating_published": 5,
+                "review_text_published": "Best pour-over in the city. The baristas clearly know their craft and take their time."
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [-0.1277583, 51.5073509] },
+            "properties": {
+                "url": "https://www.google.com/maps/place/?q=place_id:ChIJrev0002NationalGallery",
+                "name": "The National Gallery",
+                "address": "Trafalgar Square, London WC2N 5DN, UK",
+                "date": "2021-03-22",
+                "star_rating": 4,
+                "review_text": "Stunning collection and free entry. It gets crowded by midday, so arrive early."
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [139.7670002, 35.6813999] },
+            "properties": {
+                "googleMapsUrl": "https://www.google.com/maps/place/?q=place_id:ChIJrev0003TsukijiMarket",
+                "name": "Tsukiji Outer Market",
+                "Date": "2023-11-02T09:30:00+09:00",
+                "Star Rating": 5,
+                "Review Text": "Go hungry. The tamagoyaki stand near the entrance is unmissable."
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [2.2944809, 48.8583701] },
+            "properties": {
+                "place_url": "https://www.google.com/maps/place/?q=place_id:ChIJrev0004EiffelTower",
+                "location": {
+                    "name": "Eiffel Tower",
+                    "address": "Champ de Mars, 5 Av. Anatole France, 75007 Paris, France"
+                },
+                "review_date": "2017-06-30",
+                "Star_Rating_Published": 4,
+                "Published_Review": "Worth the climb. Book the summit ticket well in advance to skip the queue."
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [-73.9653834, 40.7828647] },
+            "properties": {
+                "google_maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJrev0005CentralPark",
+                "name": "Central Park",
+                "published": "2024-05-10",
+                "stars": 5,
+                "comment": "A green lung in the middle of Manhattan. Rent a rowboat at the Loeb Boathouse."
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [0, 0] },
+            "properties": {
+                "google_maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJrevSkipNoCoords",
+                "name": "Place With Stripped Coordinates",
+                "date": "2020-01-01",
+                "star_rating": 3,
+                "review_text": "This entry sits at 0,0 because Google stripped its location and must be skipped."
+            }
+        }
+    ]
+}

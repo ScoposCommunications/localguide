@@ -1,0 +1,38 @@
+{
+    "photos": [
+        {
+            "title": "PXL_20200615_temple_bar.jpg",
+            "description": "Street musicians playing outside the Temple Bar in Dublin.",
+            "imageViews": "2480",
+            "creationTime": { "timestamp": "1592241300", "formatted": "Jun 15, 2020, 5:15:00 PM UTC" },
+            "photoTakenTime": { "timestamp": "1592234100", "formatted": "Jun 15, 2020, 3:15:00 PM UTC" },
+            "geoData": { "latitude": 53.3454, "longitude": -6.2635, "altitude": 12.0 },
+            "geoDataExif": { "latitude": 53.3454289, "longitude": -6.2634971, "altitude": 12.0 },
+            "url": "https://photos.google.com/photo/AF1QipPhoto001"
+        },
+        {
+            "title": "santorini_blue_domes.jpg",
+            "description": "The blue-domed churches of Oia at sunset.",
+            "view_count": 1310,
+            "photoTakenTime": { "timestamp": "1630486800", "formatted": "Sep 1, 2021, 9:00:00 AM UTC" },
+            "geoDataExif": { "latitude": 36.4618, "longitude": 25.3753 },
+            "url": "https://photos.google.com/photo/AF1QipPhoto002"
+        },
+        {
+            "title": "kyoto_bamboo_grove.jpg",
+            "description": "Early morning light in the Arashiyama bamboo grove.",
+            "views": "770",
+            "creationTime": { "timestamp": "1680134400", "formatted": "Mar 30, 2023, 12:00:00 AM UTC" },
+            "geoData": { "latitude": 35.0170, "longitude": 135.6711, "altitude": 0 },
+            "url": "https://photos.google.com/photo/AF1QipPhoto003"
+        },
+        {
+            "title": "reykjavik_northern_lights.jpg",
+            "description": "Aurora over Reykjavik on Christmas Eve.",
+            "imageViews": "56000",
+            "date": "2024-12-24",
+            "geoDataExif": { "latitude": 64.1265, "longitude": -21.8174 },
+            "url": "https://photos.google.com/photo/AF1QipPhoto004"
+        }
+    ]
+}
